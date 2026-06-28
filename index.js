@@ -1,9 +1,10 @@
 const http = require('http');
 
-// Pega o token da variável de ambiente
-const MERCADO_PAGO_TOKEN = process.env.MERCADO_PAGO_TOKEN;
+// 🔑 SEU TOKEN DO MERCADO PAGO
+const MERCADO_PAGO_TOKEN = 'APP_USR-2461833704045856-062814-633b78c8147ff3a18f71ca6e785f49fa-3502536472';
 
 const server = http.createServer(async (req, res) => {
+    // CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -32,6 +33,9 @@ const server = http.createServer(async (req, res) => {
                 return;
             }
 
+            console.log(`🔄 Gerando link PIX para: ${nome} - R$ ${valor}`);
+
+            // ===== CRIA PREFERÊNCIA APENAS COM PIX =====
             const response = await fetch('https://api.mercadopago.com/checkout/preferences', {
                 method: 'POST',
                 headers: {
@@ -45,26 +49,51 @@ const server = http.createServer(async (req, res) => {
                         currency_id: 'BRL',
                         unit_price: parseFloat(valor)
                     }],
-                    external_reference: nome
+                    // 🔥 EXCLUI TODOS OS MÉTODOS EXCETO PIX
+                    payment_methods: {
+                        excluded_payment_methods: [
+                            { id: 'master' },
+                            { id: 'visa' },
+                            { id: 'amex' },
+                            { id: 'hipercard' },
+                            { id: 'elo' },
+                            { id: 'diners' },
+                            { id: 'ticket' }  // Boleto
+                        ],
+                        excluded_payment_types: [],
+                        installments: 1
+                    },
+                    external_reference: nome,
+                    statement_descriptor: 'CUP EDITION'
                 })
             });
 
             const data = await response.json();
 
             if (data.init_point) {
+                console.log(`✅ Link PIX gerado para ${nome}`);
                 res.writeHead(200);
-                res.end(JSON.stringify({ link: data.init_point }));
+                res.end(JSON.stringify({ 
+                    link: data.init_point,
+                    metodo: 'PIX',
+                    message: 'Link de pagamento via PIX gerado com sucesso!'
+                }));
             } else {
+                console.log('❌ Erro MP:', data);
                 res.writeHead(500);
-                res.end(JSON.stringify({ error: 'Erro ao gerar link' }));
+                res.end(JSON.stringify({ 
+                    error: 'Erro ao gerar link PIX',
+                    details: data 
+                }));
             }
         } catch (error) {
+            console.log('❌ Erro interno:', error.message);
             res.writeHead(500);
-            res.end(JSON.stringify({ error: 'Erro interno' }));
+            res.end(JSON.stringify({ error: 'Erro interno do servidor' }));
         }
     });
 });
 
-server.listen(10000, () => {
-    console.log('✅ Servidor rodando na porta 10000');
+server.listen(10000, '0.0.0.0', () => {
+    console.log('✅ Servidor PIX rodando na porta 10000');
 });
