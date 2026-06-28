@@ -1,7 +1,7 @@
 const http = require('http');
 
-// 🔑 SEU TOKEN DO MERCADO PAGO
-const MERCADO_PAGO_TOKEN = 'APP_USR-2461833704045856-062814-633b78c8147ff3a18f71ca6e785f49fa-3502536472';
+// 🔑 PEGA O TOKEN DA VARIÁVEL DE AMBIENTE
+const MERCADO_PAGO_TOKEN = process.env.MERCADO_PAGO_TOKEN;
 
 const server = http.createServer(async (req, res) => {
     // CORS
