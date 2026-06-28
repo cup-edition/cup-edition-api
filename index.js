@@ -35,7 +35,7 @@ const server = http.createServer(async (req, res) => {
 
             console.log(`🔄 Gerando link PIX para: ${nome} - R$ ${valor}`);
 
-            // ===== CRIA PREFERÊNCIA APENAS COM PIX =====
+            // ===== CRIA PREFERÊNCIA COM PIX =====
             const response = await fetch('https://api.mercadopago.com/checkout/preferences', {
                 method: 'POST',
                 headers: {
@@ -49,7 +49,7 @@ const server = http.createServer(async (req, res) => {
                         currency_id: 'BRL',
                         unit_price: parseFloat(valor)
                     }],
-                    // 🔥 EXCLUI TODOS OS MÉTODOS EXCETO PIX
+                    // 🔥 CONFIGURAÇÃO CORRETA PARA PIX
                     payment_methods: {
                         excluded_payment_methods: [
                             { id: 'master' },
@@ -57,11 +57,21 @@ const server = http.createServer(async (req, res) => {
                             { id: 'amex' },
                             { id: 'hipercard' },
                             { id: 'elo' },
-                            { id: 'diners' },
-                            { id: 'ticket' }  // Boleto
+                            { id: 'diners' }
+                            // ⚠️ NÃO REMOVA O TICKET (BOLETO) SE QUISER MANTER
+                            // MAS SE QUISER SÓ PIX, REMOVA TUDO E DEIXE ASSIM:
                         ],
-                        excluded_payment_types: [],
+                        excluded_payment_types: [
+                            { id: 'credit_card' },
+                            { id: 'debit_card' },
+                            { id: 'ticket' }  // Remove boleto
+                            // ⚠️ NÃO REMOVA O 'pix' DA LISTA!
+                        ],
                         installments: 1
+                    },
+                    // 🔑 CONFIGURAÇÃO ESPECÍFICA DO PIX
+                    payer: {
+                        email: 'teste@teste.com'
                     },
                     external_reference: nome,
                     statement_descriptor: 'CUP EDITION'
@@ -79,7 +89,7 @@ const server = http.createServer(async (req, res) => {
                     message: 'Link de pagamento via PIX gerado com sucesso!'
                 }));
             } else {
-                console.log('❌ Erro MP:', data);
+                console.log('❌ Erro MP:', JSON.stringify(data));
                 res.writeHead(500);
                 res.end(JSON.stringify({ 
                     error: 'Erro ao gerar link PIX',
