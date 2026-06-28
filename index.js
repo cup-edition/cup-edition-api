@@ -1,7 +1,7 @@
 const http = require('http');
 
 // 🔑 COLE SEU TOKEN DO MERCADO PAGO AQUI:
-const MERCADO_PAGO_TOKEN = 'SEU_TOKEN_AQUI';
+const MERCADO_PAGO_TOKEN = 'APP_USR-2461833704045856-062814-633b78c8147ff3a18f71ca6e785f49fa-3502536472';
 
 const server = http.createServer(async (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
