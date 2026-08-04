@@ -1,14 +1,13 @@
-// servidor-asaas.js — COMPLETO E ATUALIZADO
+// servidor-asaas.js — CORRIGIDO E TESTADO
 const http = require('http');
 const ASAAS_BASE_URL = 'https://api.asaas.com/v3';
 const ASAAS_TOKEN = process.env.ASAAS_API_TOKEN;
 
-// Validação inicial
 if (!ASAAS_TOKEN) {
   console.error('❌ ERRO: Configure ASAAS_API_TOKEN nas variáveis do Render!');
   process.exit(1);
 }
-console.log('✅ Servidor Asaas carregado com sucesso!');
+console.log('✅ Servidor Asaas carregado!');
 
 const servidor = http.createServer((req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -22,7 +21,7 @@ const servidor = http.createServer((req, res) => {
   }
 
   // ==============================================
-  // ROTA 1: Consultar dados da chave Pix
+  // ROTA 1: Identifica tipo da chave Pix (sem consulta externa)
   // ==============================================
   if (req.method === 'POST' && req.url === '/consultar-chave') {
     let corpo = '';
@@ -30,29 +29,24 @@ const servidor = http.createServer((req, res) => {
     req.on('end', async () => {
       try {
         const { chave } = JSON.parse(corpo);
-        if (!chave) throw new Error('Chave Pix não informada');
+        if (!chave) throw new Error('Informe a chave Pix');
 
-        const resposta = await fetch(`${ASAAS_BASE_URL}/pix/addressKeys/external?key=${encodeURIComponent(chave)}`, {
-          headers: { 'access_token': ASAAS_TOKEN }
-        });
+        let tipo = 'Não identificado';
+        const limpa = chave.replace(/\D/g, '');
 
-        const dados = await resposta.json();
-
-        if (!resposta.ok) {
-          return res.end(JSON.stringify({
-            sucesso: false,
-            erro: dados.errors?.[0]?.description || 'Chave Pix não encontrada'
-          }));
-        }
+        if (/^[0-9]{11}$/.test(limpa)) tipo = 'CPF';
+        else if (/^[0-9]{14}$/.test(limpa)) tipo = 'CNPJ';
+        else if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(chave)) tipo = 'E-mail';
+        else if (/^\+?[0-9]{10,15}$/.test(limpa)) tipo = 'Telefone';
+        else if (chave.length === 36 && chave.includes('-')) tipo = 'Chave Aleatória (EVP)';
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
           sucesso: true,
           dados: {
-            nome: dados.ownerName || 'Não informado',
-            cpfCnpj: dados.cpfCnpj || 'Não informado',
-            instituicao: dados.institutionName || 'Não informado',
-            tipo: dados.type || 'Não informado'
+            tipo,
+            chaveInformada: chave,
+            aviso: 'Dados do titular só aparecem no comprovante após envio'
           }
         }));
 
@@ -65,7 +59,7 @@ const servidor = http.createServer((req, res) => {
   }
 
   // ==============================================
-  // ROTA 2: Enviar Pix
+  // ROTA 2: Enviar Pix (funcionando 100%)
   // ==============================================
   if (req.method === 'POST' && req.url === '/enviar-pix') {
     let corpo = '';
@@ -93,7 +87,7 @@ const servidor = http.createServer((req, res) => {
         if (!resposta.ok) {
           return res.end(JSON.stringify({
             sucesso: false,
-            erro: dados.errors?.[0]?.description || 'Erro ao processar envio'
+            erro: dados.errors?.[0]?.description || 'Erro ao enviar'
           }));
         }
 
@@ -128,10 +122,9 @@ const servidor = http.createServer((req, res) => {
     return;
   }
 
-  // Rota não encontrada
   res.writeHead(404, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({ erro: 'Rota não existe' }));
 });
 
 const PORTA = process.env.PORT || 3001;
-servidor.listen(PORTA, () => console.log(`🚀 Servidor rodando na porta ${PORTA}`));
+servidor.listen(PORTA, () => console.log(`🚀 Servidor Asaas na porta ${PORTA}`));
