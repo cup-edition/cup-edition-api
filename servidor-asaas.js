@@ -1,4 +1,4 @@
-// servidor-asaas.js — COMPLETO E FINAL
+// servidor-asaas.js — COMPLETO COM VALIDAÇÃO AUTOMÁTICA
 const http = require('http');
 const ASAAS_BASE_URL = 'https://api.asaas.com/v3';
 const ASAAS_TOKEN = process.env.ASAAS_API_TOKEN;
@@ -20,43 +20,37 @@ const servidor = http.createServer((req, res) => {
     return;
   }
 
-  // ==============================================
-  // ROTA 1: Identifica tipo da chave Pix
-  // ==============================================
-  if (req.method === 'POST' && req.url === '/consultar-chave') {
+  // =================================================
+  // ✅ ROTA 1: VALIDAÇÃO AUTOMÁTICA DE SAQUE (WEBHOOK)
+  // =================================================
+  if (req.method === 'POST' && req.url === '/validar-saque') {
     let corpo = '';
     req.on('data', p => corpo += p);
     req.on('end', async () => {
       try {
-        const { chave } = JSON.parse(corpo);
-        if (!chave) throw new Error('Informe a chave Pix');
+        const dados = JSON.parse(corpo);
+        console.log('📩 Asaas pediu autorização — ID:', dados.id || dados.transfer?.id);
 
-        let tipo = 'Não identificado';
-        const limpa = chave.replace(/\D/g, '');
-
-        if (/^[0-9]{11}$/.test(limpa)) tipo = 'CPF';
-        else if (/^[0-9]{14}$/.test(limpa)) tipo = 'CNPJ';
-        else if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(chave)) tipo = 'E-mail';
-        else if (/^\+?[0-9]{10,15}$/.test(limpa)) tipo = 'Telefone';
-        else if (chave.length === 36 && chave.includes('-')) tipo = 'Chave Aleatória (EVP)';
-
+        // ✅ SEMPRE AUTORIZA O ENVIO!
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
-          sucesso: true,
-          dados: { tipo, chaveInformada: chave }
+          authorization: true,
+          observation: 'Aprovado automaticamente pelo sistema'
         }));
 
+        console.log('✅ AUTORIZADO! Pix liberado.');
       } catch (erro) {
-        res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ sucesso: false, erro: erro.message }));
+        console.log('❌ Erro na validação:', erro.message);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ authorization: false }));
       }
     });
     return;
   }
 
-  // ==============================================
-  // ROTA 2: Envia Pix e RETORNA TODOS OS DADOS
-  // ==============================================
+  // =================================================
+  // ✅ ROTA 2: ENVIAR PIX
+  // =================================================
   if (req.method === 'POST' && req.url === '/enviar-pix') {
     let corpo = '';
     req.on('data', p => corpo += p);
@@ -87,7 +81,6 @@ const servidor = http.createServer((req, res) => {
           }));
         }
 
-        // ✅ Repassa TUDO o que veio do Asaas para a página
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ sucesso: true, dados: dadosCompletos }));
 
@@ -99,9 +92,9 @@ const servidor = http.createServer((req, res) => {
     return;
   }
 
-  // ==============================================
-  // ROTA 3: Consultar saldo
-  // ==============================================
+  // =================================================
+  // ✅ ROTA 3: CONSULTAR SALDO
+  // =================================================
   if (req.method === 'GET' && req.url === '/saldo-asaas') {
     (async () => {
       try {
@@ -120,7 +113,7 @@ const servidor = http.createServer((req, res) => {
   }
 
   res.writeHead(404, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify({ erro: 'Rota não existe' }));
+  res.end(JSON.stringify({ erro: 'Rota não encontrada' }));
 });
 
 const PORTA = process.env.PORT || 3001;
