@@ -36,12 +36,15 @@ const servidor = http.createServer((req, res) => {
     function tiposCandidatos(c) {
       const limpa = c.replace(/[\s.-]/g, '');
       if (limpa.includes('@')) return ['EMAIL'];
-      const digitos = limpa.replace(/\D/g, '');
+
       if (/^[0-9]+$/.test(limpa)) {
-        if (digitos.length === 11) return ['CPF'];
-        if (digitos.length === 14) return ['CNPJ'];
+        const n = limpa.length;
+        if (n === 11) return ['CPF', 'PHONE'];
+        if (n === 14) return ['CNPJ'];
+        if (n === 13) return ['PHONE', 'CNPJ'];
         return ['PHONE'];
       }
+
       return ['EVP'];
     }
 
@@ -50,7 +53,12 @@ const servidor = http.createServer((req, res) => {
         let resposta = null;
         let dados = null;
 
-        for (const tipo of tiposCandidatos(chave)) {
+        const tentarTipos = [...new Set([
+          ...tiposCandidatos(chave),
+          'CPF', 'CNPJ', 'PHONE', 'EMAIL', 'EVP'
+        ])];
+
+        for (const tipo of tentarTipos) {
           resposta = await fetch(
             `${ASAAS_BASE_URL}/pix/addressKeys/external?type=${tipo}&key=${encodeURIComponent(chave)}`,
             { headers: { 'access_token': ASAAS_TOKEN } }
