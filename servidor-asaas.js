@@ -1,4 +1,4 @@
-// servidor-asaas.js — COMPLETO E CORRIGIDO
+// servidor-asaas.js — VERSÃO FINAL CORRIGIDA PARA API v3
 const http = require('http');
 const ASAAS_BASE_URL = 'https://api.asaas.com/v3';
 const ASAAS_TOKEN = process.env.ASAAS_API_TOKEN;
@@ -21,7 +21,7 @@ const servidor = http.createServer((req, res) => {
   }
 
   // =================================================
-  // ✅ ROTA 1: VALIDAÇÃO DE SAQUE (FORMATO EXATO)
+  // ✅ ROTA DE VALIDAÇÃO — FORMATO EXATO API v3
   // =================================================
   if (req.method === 'POST' && req.url === '/validar-saque') {
     let corpo = '';
@@ -29,26 +29,31 @@ const servidor = http.createServer((req, res) => {
     req.on('end', async () => {
       try {
         const dados = JSON.parse(corpo);
-        console.log('📩 Asaas pediu autorização:', JSON.stringify(dados));
+        console.log('📩 Asaas pediu autorização — ID:', dados.id || dados.transfer?.id || 'sem id');
 
-        // ✅ RESPOSTA EXATA — SEM CAMPOS EXTRAS!
+        // ✅ RESPOSTA NO FORMATO EXATO EXIGIDO PELA API v3
+        const resposta = {
+          authorized: true
+        };
+
+        console.log('✅ Enviando:', JSON.stringify(resposta));
+
         res.writeHead(200, {
-          'Content-Type': 'application/json; charset=utf-8'
+          'Content-Type': 'application/json'
         });
-        res.end(JSON.stringify({ authorization: true }));
+        res.end(JSON.stringify(resposta));
 
-        console.log('✅ AUTORIZADO! Resposta enviada.');
       } catch (erro) {
         console.log('❌ Erro:', erro.message);
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ authorization: false }));
+        res.end(JSON.stringify({ authorized: false }));
       }
     });
     return;
   }
 
   // =================================================
-  // ✅ ROTA 2: ENVIAR PIX
+  // ✅ ROTA DE ENVIAR PIX
   // =================================================
   if (req.method === 'POST' && req.url === '/enviar-pix') {
     let corpo = '';
@@ -92,7 +97,7 @@ const servidor = http.createServer((req, res) => {
   }
 
   // =================================================
-  // ✅ ROTA 3: CONSULTAR SALDO
+  // ✅ ROTA DE CONSULTAR SALDO
   // =================================================
   if (req.method === 'GET' && req.url === '/saldo-asaas') {
     (async () => {
@@ -111,9 +116,9 @@ const servidor = http.createServer((req, res) => {
     return;
   }
 
-  res.writeHead(404, { 'Content-Type': 'application/json' });
+  res.writeHead(404);
   res.end(JSON.stringify({ erro: 'Rota não encontrada' }));
 });
 
-const PORTA = process.env.PORT || 3001;
+const PORTA = process.env.PORT || 10000;
 servidor.listen(PORTA, () => console.log(`🚀 Servidor rodando na porta ${PORTA}`));
