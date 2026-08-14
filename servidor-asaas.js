@@ -21,6 +21,53 @@ const servidor = http.createServer((req, res) => {
   }
 
   // =================================================
+  // ✅ ROTA DE CONSULTAR CHAVE PIX (ANTES DE ENVIAR)
+  // =================================================
+  if (req.method === 'GET' && req.url.startsWith('/consultar-chave')) {
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const tipo = url.searchParams.get('tipo');
+    const chave = url.searchParams.get('chave');
+
+    if (!tipo || !chave) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ sucesso: false, erro: 'Tipo e chave são obrigatórios' }));
+      return;
+    }
+
+    (async () => {
+      try {
+        const resposta = await fetch(
+          `${ASAAS_BASE_URL}/pix/addressKeys/external?type=${encodeURIComponent(tipo)}&key=${encodeURIComponent(chave)}`,
+          { headers: { 'access_token': ASAAS_TOKEN } }
+        );
+
+        const dados = await resposta.json();
+
+        if (!resposta.ok) {
+          return res.end(JSON.stringify({
+            sucesso: false,
+            erro: dados.errors?.[0]?.description || 'Chave não encontrada ou inválida'
+          }));
+        }
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          sucesso: true,
+          key: dados.key,
+          owner: dados.owner,
+          financialInstitution: dados.financialInstitution,
+          ispbName: dados.ispbName
+        }));
+
+      } catch (erro) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ sucesso: false, erro: erro.message }));
+      }
+    })();
+    return;
+  }
+
+  // =================================================
   // ✅ ROTA DE VALIDAÇÃO — RESPOSTA EXATA DO ASAAS
   // =================================================
   if (req.method === 'POST' && req.url === '/validar-saque') {
