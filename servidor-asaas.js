@@ -171,7 +171,7 @@ const servidor = http.createServer((req, res) => {
   if (req.method === 'GET' && req.url === '/saldo-asaas') {
     (async () => {
       try {
-        const resposta = await fetch(`${ASAAS_BASE_URL}/balance`, {
+        const resposta = await fetch(`${ASAAS_BASE_URL}/finance/balance`, {
           headers: {
             'access_token': ASAAS_TOKEN,
             'User-Agent': 'CupEdition/1.0.0',
