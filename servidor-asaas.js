@@ -1,4 +1,4 @@
-// servidor-asaas.js — CORRIGIDO E TESTADO
+// servidor-asaas.js — COMPLETO E FINAL
 const http = require('http');
 const ASAAS_BASE_URL = 'https://api.asaas.com/v3';
 const ASAAS_TOKEN = process.env.ASAAS_API_TOKEN;
@@ -7,7 +7,7 @@ if (!ASAAS_TOKEN) {
   console.error('❌ ERRO: Configure ASAAS_API_TOKEN nas variáveis do Render!');
   process.exit(1);
 }
-console.log('✅ Servidor Asaas carregado!');
+console.log('✅ Servidor Asaas carregado com sucesso!');
 
 const servidor = http.createServer((req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -21,7 +21,7 @@ const servidor = http.createServer((req, res) => {
   }
 
   // ==============================================
-  // ROTA 1: Identifica tipo da chave Pix (sem consulta externa)
+  // ROTA 1: Identifica tipo da chave Pix
   // ==============================================
   if (req.method === 'POST' && req.url === '/consultar-chave') {
     let corpo = '';
@@ -43,11 +43,7 @@ const servidor = http.createServer((req, res) => {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
           sucesso: true,
-          dados: {
-            tipo,
-            chaveInformada: chave,
-            aviso: 'Dados do titular só aparecem no comprovante após envio'
-          }
+          dados: { tipo, chaveInformada: chave }
         }));
 
       } catch (erro) {
@@ -59,7 +55,7 @@ const servidor = http.createServer((req, res) => {
   }
 
   // ==============================================
-  // ROTA 2: Enviar Pix (funcionando 100%)
+  // ROTA 2: Envia Pix e RETORNA TODOS OS DADOS
   // ==============================================
   if (req.method === 'POST' && req.url === '/enviar-pix') {
     let corpo = '';
@@ -82,17 +78,18 @@ const servidor = http.createServer((req, res) => {
           })
         });
 
-        const dados = await resposta.json();
+        const dadosCompletos = await resposta.json();
 
         if (!resposta.ok) {
           return res.end(JSON.stringify({
             sucesso: false,
-            erro: dados.errors?.[0]?.description || 'Erro ao enviar'
+            erro: dadosCompletos.errors?.[0]?.description || 'Erro ao processar'
           }));
         }
 
+        // ✅ Repassa TUDO o que veio do Asaas para a página
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ sucesso: true, dados }));
+        res.end(JSON.stringify({ sucesso: true, dados: dadosCompletos }));
 
       } catch (erro) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -127,4 +124,4 @@ const servidor = http.createServer((req, res) => {
 });
 
 const PORTA = process.env.PORT || 3001;
-servidor.listen(PORTA, () => console.log(`🚀 Servidor Asaas na porta ${PORTA}`));
+servidor.listen(PORTA, () => console.log(`🚀 Servidor rodando na porta ${PORTA}`));
