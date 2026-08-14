@@ -1,4 +1,4 @@
-// servidor-asaas.js — VERSÃO FINAL 100% CORRIGIDA
+// servidor-asaas.js — VERSÃO FINAL DEFINITIVA ✅
 const http = require('http');
 const ASAAS_BASE_URL = 'https://api.asaas.com/v3';
 const ASAAS_TOKEN = process.env.ASAAS_API_TOKEN;
@@ -21,7 +21,7 @@ const servidor = http.createServer((req, res) => {
   }
 
   // =================================================
-  // ✅ ROTA DE VALIDAÇÃO — FORMATO EXIGIDO PELO ASAAS
+  // ✅ ROTA DE VALIDAÇÃO — RESPOSTA EXATA DO ASAAS
   // =================================================
   if (req.method === 'POST' && req.url === '/validar-saque') {
     let corpo = '';
@@ -31,21 +31,15 @@ const servidor = http.createServer((req, res) => {
         const dados = JSON.parse(corpo);
         console.log('📩 Asaas pediu autorização — ID:', dados.transfer?.id);
 
-        // ✅ PRECISA ESTAR DENTRO DE "transfer"!
-        const resposta = {
-          transfer: {
-            authorized: true
-          }
-        };
-
-        console.log('✅ Enviando:', JSON.stringify(resposta));
+        // ✅ RESPOSTA OFICIAL DA DOCUMENTAÇÃO: {"status":"APPROVED"}
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(resposta));
+        res.end('{"status":"APPROVED"}');
 
+        console.log('✅ APROVADO! Resposta enviada corretamente.');
       } catch (erro) {
         console.log('❌ Erro:', erro.message);
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ transfer: { authorized: false } }));
+        res.end('{"status":"REFUSED"}');
       }
     });
     return;
