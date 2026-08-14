@@ -25,23 +25,43 @@ const servidor = http.createServer((req, res) => {
   // =================================================
   if (req.method === 'GET' && req.url.startsWith('/consultar-chave')) {
     const url = new URL(req.url, `http://${req.headers.host}`);
-    const tipo = url.searchParams.get('tipo');
     const chave = url.searchParams.get('chave');
 
-    if (!tipo || !chave) {
+    if (!chave) {
       res.writeHead(400, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ sucesso: false, erro: 'Tipo e chave são obrigatórios' }));
+      res.end(JSON.stringify({ sucesso: false, erro: 'Chave é obrigatória' }));
       return;
+    }
+
+    function tiposCandidatos(c) {
+      const limpa = c.replace(/[\s.-]/g, '');
+      if (limpa.includes('@')) return ['EMAIL'];
+      const digitos = limpa.replace(/\D/g, '');
+      if (/^[0-9]+$/.test(limpa)) {
+        if (digitos.length === 11) return ['CPF'];
+        if (digitos.length === 14) return ['CNPJ'];
+        return ['PHONE'];
+      }
+      return ['EVP'];
     }
 
     (async () => {
       try {
-        const resposta = await fetch(
-          `${ASAAS_BASE_URL}/pix/addressKeys/external?type=${encodeURIComponent(tipo)}&key=${encodeURIComponent(chave)}`,
-          { headers: { 'access_token': ASAAS_TOKEN } }
-        );
+        let resposta = null;
+        let dados = null;
 
-        const dados = await resposta.json();
+        for (const tipo of tiposCandidatos(chave)) {
+          resposta = await fetch(
+            `${ASAAS_BASE_URL}/pix/addressKeys/external?type=${tipo}&key=${encodeURIComponent(chave)}`,
+            { headers: { 'access_token': ASAAS_TOKEN } }
+          );
+          dados = await resposta.json();
+
+          if (resposta.ok) {
+            dados.tipoDetectado = tipo;
+            break;
+          }
+        }
 
         if (!resposta.ok) {
           return res.end(JSON.stringify({
@@ -54,6 +74,7 @@ const servidor = http.createServer((req, res) => {
         res.end(JSON.stringify({
           sucesso: true,
           key: dados.key,
+          tipoDetectado: dados.tipoDetectado,
           owner: dados.owner,
           financialInstitution: dados.financialInstitution,
           ispbName: dados.ispbName
