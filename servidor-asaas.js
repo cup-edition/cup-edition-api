@@ -1,4 +1,4 @@
-// servidor-asaas.js — COMPLETO COM VALIDAÇÃO AUTOMÁTICA
+// servidor-asaas.js — COMPLETO E CORRIGIDO
 const http = require('http');
 const ASAAS_BASE_URL = 'https://api.asaas.com/v3';
 const ASAAS_TOKEN = process.env.ASAAS_API_TOKEN;
@@ -21,7 +21,7 @@ const servidor = http.createServer((req, res) => {
   }
 
   // =================================================
-  // ✅ ROTA 1: VALIDAÇÃO AUTOMÁTICA DE SAQUE (WEBHOOK)
+  // ✅ ROTA 1: VALIDAÇÃO DE SAQUE (FORMATO EXATO)
   // =================================================
   if (req.method === 'POST' && req.url === '/validar-saque') {
     let corpo = '';
@@ -29,18 +29,17 @@ const servidor = http.createServer((req, res) => {
     req.on('end', async () => {
       try {
         const dados = JSON.parse(corpo);
-        console.log('📩 Asaas pediu autorização — ID:', dados.id || dados.transfer?.id);
+        console.log('📩 Asaas pediu autorização:', JSON.stringify(dados));
 
-        // ✅ SEMPRE AUTORIZA O ENVIO!
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({
-          authorization: true,
-          observation: 'Aprovado automaticamente pelo sistema'
-        }));
+        // ✅ RESPOSTA EXATA — SEM CAMPOS EXTRAS!
+        res.writeHead(200, {
+          'Content-Type': 'application/json; charset=utf-8'
+        });
+        res.end(JSON.stringify({ authorization: true }));
 
-        console.log('✅ AUTORIZADO! Pix liberado.');
+        console.log('✅ AUTORIZADO! Resposta enviada.');
       } catch (erro) {
-        console.log('❌ Erro na validação:', erro.message);
+        console.log('❌ Erro:', erro.message);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ authorization: false }));
       }
