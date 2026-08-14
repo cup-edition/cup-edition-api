@@ -174,8 +174,10 @@ const servidor = http.createServer((req, res) => {
         const resposta = await fetch(`${ASAAS_BASE_URL}/balance`, {
           headers: { 'access_token': ASAAS_TOKEN }
         });
-        const dados = await resposta.json();
-        res.writeHead(200, { 'Content-Type': 'application/json' });
+        const texto = await resposta.text();
+        let dados;
+        try { dados = JSON.parse(texto); } catch (e) { dados = { raw: texto }; }
+        res.writeHead(resposta.ok ? 200 : resposta.status, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(dados));
       } catch (erro) {
         res.writeHead(500, { 'Content-Type': 'application/json' });
